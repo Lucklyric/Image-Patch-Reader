@@ -185,7 +185,7 @@ class DataReaderPatchWise(object):
 # For testing
 if __name__ == '__main__':
     test_reader = DataReaderPatchWise(
-        path="/home/alvinsun/Documents/Data/imagenet/ILSVRC/Data/DET/train/**/*.JPEG",
+        path="/train/**/*.JPEG",  # path for your image folder 
         batch_size=64,
         patch_size=64,
         num_thread=2,
