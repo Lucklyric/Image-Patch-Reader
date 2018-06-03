@@ -1,15 +1,15 @@
 """
 Created on 2018-03-23
-Project: Image-Patch-Reader 
+Project: Image-Patch-Reader
 File: DataReader
 ...
 @author: Alvin(Xinyao) Sun
 """
-#%%
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage.color import rgb2gray
+# from skimage.color import rgb2gray
 from skimage.transform import resize
+from skimage.io import imread
 import glob
 
 import threading
@@ -19,9 +19,9 @@ import time
 class QThread(threading.Thread):
     def __init__(self, name, target):
         """
-             python threading wrapper 
-            :param self: 
-            :param name: name of the thread 
+             python threading wrapper
+            :param self:
+            :param name: name of the thread
             :param target: target function
         """
         threading.Thread.__init__(self, name=name, target=target)
@@ -51,15 +51,15 @@ class DataReaderPatchWise(object):
                  min_cap_of_patches=6000,
                  max_cap_of_patches=8000):
         """
-        Data Reader Instance 
-            :param path: path of the folder 
+        Data Reader Instance
+            :param path: path of the folder
             :param batch_size=64:  size of the batch
             :param patch_size=64:  size of the patch
             :param num_thread=2:  number of threads
-            :param num_image_per_sample=2:  number of sampled images 
-            :param num_patcehs_per_image=2:  number of patches per sample 
-            :param min_cap_of_patches=6000: 
-            :param max_cap_of_patches=8000: 
+            :param num_image_per_sample=2:  number of sampled images
+            :param num_patcehs_per_image=2:  number of patches per sample
+            :param min_cap_of_patches=6000:
+            :param max_cap_of_patches=8000:
         """
         self.data_q = []
         self.path = path
@@ -79,19 +79,20 @@ class DataReaderPatchWise(object):
 
     def append_to_q(self, imgs=None):
         """
-        Append pathces to the queue 
-            :param self: 
-            :param imgs=None: 
+        Append pathces to the queue
+            :param self:
+            :param imgs=None:
         """
         self.lock.acquire()
         self.data_q.extend(imgs)
+        print(len(self.data_q))
         self.lock.release()
         return
 
     def pop_from_q(self):
         """
         Pop patcehs from the queue
-            :param self: 
+            :param self:
         """
         while True:
             check = self.batch_size
@@ -121,7 +122,7 @@ class DataReaderPatchWise(object):
     def run_loop(self):
         """
         Running loop function
-            :param self: 
+            :param self:
         """
         t = threading.current_thread()
         while t.running_state():
@@ -139,16 +140,15 @@ class DataReaderPatchWise(object):
     def prepare_data(self):
         """
         Reading randomly selected images and extract patches randomly
-            :param self: 
+            :param self:
         """
         file_idxes = np.random.randint(0, len(self.files), size=[self.num_image_per_sample])
         patches = []
         sample_size = self.num_patches_per_image
         for i in range(len(file_idxes)):
-            img = rgb2gray(plt.imread(self.files[file_idxes[i]]))
+            img = imread(self.files[file_idxes[i]],as_grey=True)
             img = resize(img, [256, 256])
             [h, w] = np.shape(img)
-
             rows = np.random.randint(0, h - self.patch_size - 1, size=sample_size)
             cols = np.random.randint(0, w - self.patch_size - 1, size=sample_size)
             for k in range(sample_size):
@@ -161,14 +161,14 @@ class DataReaderPatchWise(object):
     def next_batch(self):
         """
         Call to get a batch of patches
-            :param self: 
+            :param self:
         """
         return np.reshape(self.pop_from_q(), [-1, self.patch_size, self.patch_size, 1])
 
     def start_feeding_q(self):
         """
         Start all threads
-            :param self: 
+            :param self:
         """
         for thread in self.q_threads:
             thread.start()
@@ -176,7 +176,7 @@ class DataReaderPatchWise(object):
     def stop_feeding_q(self):
         """
         Terminate all threads
-            :param self: 
+            :param self:
         """
         for thread in self.q_threads:
             thread.stop_thread()
@@ -185,16 +185,18 @@ class DataReaderPatchWise(object):
 # For testing
 if __name__ == '__main__':
     test_reader = DataReaderPatchWise(
-        path="/train/**/*.JPEG",  # path for your image folder 
+        path="/home/alvinsun/Documents/Data/imagenet/ILSVRC/Data/DET/train/**/*.JPEG",
         batch_size=64,
         patch_size=64,
         num_thread=2,
-        num_image_per_sample=64,
-        num_patches_per_image=10,
+        num_image_per_sample=1,
+        num_patches_per_image=2,
         min_cap_of_patches=1000,
-        max_cap_of_patches=8000)
+        max_cap_of_patches=8000,
+        )
     test_reader.start_feeding_q()
     sample_batch = test_reader.next_batch()
     print("shape of sample batch" + str(sample_batch.shape))
     plt.imshow(np.reshape(sample_batch[0], [64, 64]), cmap="gray")
+    time.sleep(100)
     print("Done")
